@@ -1,0 +1,107 @@
+import express from 'express';
+import cors from 'cors';
+import YahooFinance from 'yahoo-finance2';
+const yahooFinance = new YahooFinance();
+
+const app = express();
+const PORT = 3001;
+
+app.use(cors());
+app.use(express.json());
+
+// Get stock quote
+app.get('/api/quote/:symbol', async (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const quote = await yahooFinance.quote(symbol);
+    res.json({
+      symbol: quote.symbol,
+      shortName: quote.shortName || quote.symbol,
+      longName: quote.longName,
+      regularMarketPrice: quote.regularMarketPrice || 0,
+      regularMarketChange: quote.regularMarketChange || 0,
+      regularMarketChangePercent: quote.regularMarketChangePercent || 0,
+      regularMarketVolume: quote.regularMarketVolume || 0,
+      marketCap: quote.marketCap,
+      regularMarketDayHigh: quote.regularMarketDayHigh,
+      regularMarketDayLow: quote.regularMarketDayLow,
+      regularMarketOpen: quote.regularMarketOpen,
+      regularMarketPreviousClose: quote.regularMarketPreviousClose,
+      fiftyTwoWeekHigh: quote.fiftyTwoWeekHigh,
+      fiftyTwoWeekLow: quote.fiftyTwoWeekLow,
+    });
+  } catch (error) {
+    console.error('Quote error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get historical data
+app.get('/api/historical/:symbol', async (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const { range = '1mo' } = req.query;
+
+    const periodMap = {
+      '1d': { period1: new Date(Date.now() - 24 * 60 * 60 * 1000), interval: '5m' },
+      '5d': { period1: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), interval: '1h' },
+      '1mo': { period1: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), interval: '1d' },
+      '3mo': { period1: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000), interval: '1d' },
+      '6mo': { period1: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000), interval: '1d' },
+      '1y': { period1: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), interval: '1d' },
+      '5y': { period1: new Date(Date.now() - 5 * 365 * 24 * 60 * 60 * 1000), interval: '1d' },
+    };
+
+    const { period1, interval } = periodMap[range] || periodMap['1mo'];
+    const result = await yahooFinance.chart(symbol, {
+      period1,
+      period2: new Date(),
+      interval,
+    });
+
+    const data = result.quotes.map((q) => ({
+      date: q.date.toISOString(),
+      open: q.open || 0,
+      high: q.high || 0,
+      low: q.low || 0,
+      close: q.close || 0,
+      volume: q.volume || 0,
+    }));
+
+    res.json(data);
+  } catch (error) {
+    console.error('Historical error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Search stocks
+app.get('/api/search', async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q || q.length < 1) {
+      return res.json([]);
+    }
+
+    const results = await yahooFinance.search(q);
+    const quotes = results.quotes
+      .filter((quote) => quote.quoteType === 'EQUITY' || quote.quoteType === 'ETF')
+      .slice(0, 10)
+      .map((quote) => ({
+        symbol: quote.symbol,
+        shortname: quote.shortname,
+        longname: quote.longname,
+        exchange: quote.exchange || '',
+        quoteType: quote.quoteType || '',
+      }));
+
+    res.json(quotes);
+  } catch (error) {
+    console.error('Search error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`API server running on http://localhost:${PORT}`);
+});
