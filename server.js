@@ -1,18 +1,41 @@
 import express from 'express';
 import cors from 'cors';
+import { rateLimit } from 'express-rate-limit';
 import YahooFinance from 'yahoo-finance2';
 const yahooFinance = new YahooFinance();
 
 const app = express();
 const PORT = 3001;
 
-app.use(cors());
+// Only accept requests from the local Vite dev server
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+}));
 app.use(express.json());
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' },
+});
+app.use('/api', limiter);
+
+// Valid stock symbol: 1–15 uppercase letters, digits, dots, hyphens, or ^ (for indices)
+const SYMBOL_RE = /^[A-Z0-9.\-^]{1,15}$/i;
+
+function validateSymbol(symbol) {
+  return typeof symbol === 'string' && SYMBOL_RE.test(symbol);
+}
 
 // Get stock quote
 app.get('/api/quote/:symbol', async (req, res) => {
+  const { symbol } = req.params;
+  if (!validateSymbol(symbol)) {
+    return res.status(400).json({ error: 'Invalid symbol.' });
+  }
   try {
-    const { symbol } = req.params;
     const quote = await yahooFinance.quote(symbol);
     res.json({
       symbol: quote.symbol,
@@ -32,14 +55,17 @@ app.get('/api/quote/:symbol', async (req, res) => {
     });
   } catch (error) {
     console.error('Quote error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Failed to fetch quote.' });
   }
 });
 
 // Get historical data
 app.get('/api/historical/:symbol', async (req, res) => {
+  const { symbol } = req.params;
+  if (!validateSymbol(symbol)) {
+    return res.status(400).json({ error: 'Invalid symbol.' });
+  }
   try {
-    const { symbol } = req.params;
     const { range = '1mo' } = req.query;
 
     const periodMap = {
@@ -71,7 +97,7 @@ app.get('/api/historical/:symbol', async (req, res) => {
     res.json(data);
   } catch (error) {
     console.error('Historical error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Failed to fetch historical data.' });
   }
 });
 
@@ -81,6 +107,9 @@ app.get('/api/search', async (req, res) => {
     const { q } = req.query;
     if (!q || q.length < 1) {
       return res.json([]);
+    }
+    if (q.length > 50) {
+      return res.status(400).json({ error: 'Query too long.' });
     }
 
     const results = await yahooFinance.search(q);
@@ -98,7 +127,7 @@ app.get('/api/search', async (req, res) => {
     res.json(quotes);
   } catch (error) {
     console.error('Search error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Search failed.' });
   }
 });
 

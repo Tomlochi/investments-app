@@ -1,6 +1,11 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { StockInsightRequest, PortfolioInsightRequest, AIInsight, InsightSentiment } from '../types';
 
+// Strip control characters and limit length to prevent prompt injection
+function sanitize(value: string, maxLen = 100): string {
+  return value.replace(/[\x00-\x1F\x7F]/g, '').slice(0, maxLen);
+}
+
 const anthropic = new Anthropic({
   apiKey: import.meta.env.VITE_ANTHROPIC_API_KEY,
   dangerouslyAllowBrowser: true,
@@ -43,9 +48,11 @@ function parseInsightResponse(content: string, type: 'stock' | 'portfolio', symb
 }
 
 export async function getStockInsight(request: StockInsightRequest): Promise<AIInsight> {
+  const name = sanitize(request.name);
+  const symbol = sanitize(request.symbol, 15);
   const prompt = `Analyze this stock for an investor:
 
-Stock: ${request.name} (${request.symbol})
+Stock: ${name} (${symbol})
 Current Price: $${request.currentPrice.toFixed(2)}
 Daily Change: ${request.changePercent >= 0 ? '+' : ''}${request.changePercent.toFixed(2)}%
 ${request.quantity ? `Holdings: ${request.quantity} shares at $${request.purchasePrice?.toFixed(2)} avg cost` : ''}
@@ -70,7 +77,7 @@ Keep the response under 300 words. Be specific and actionable.`;
 
 export async function getPortfolioInsight(request: PortfolioInsightRequest): Promise<AIInsight> {
   const holdingsSummary = request.holdings
-    .map(h => `- ${h.symbol}: ${h.quantity} shares, ${(h.weight * 100).toFixed(1)}% of portfolio, ${((h.currentPrice - h.purchasePrice) / h.purchasePrice * 100).toFixed(1)}% gain/loss`)
+    .map(h => `- ${sanitize(h.symbol, 15)}: ${h.quantity} shares, ${(h.weight * 100).toFixed(1)}% of portfolio, ${((h.currentPrice - h.purchasePrice) / h.purchasePrice * 100).toFixed(1)}% gain/loss`)
     .join('\n');
 
   const prompt = `Analyze this investment portfolio:
