@@ -61,6 +61,32 @@ export interface AIInsight {
   timestamp: string;
 }
 
+export interface StockBriefItem {
+  symbol: string;
+  brief: string;
+  sentiment: InsightSentiment;
+}
+
+export interface DailyBriefResponse {
+  overallSummary: string;
+  stocks: StockBriefItem[];
+  timestamp: string;
+}
+
+export interface TradeEntry {
+  id: string;
+  type: 'buy' | 'sell';
+  symbol: string;
+  name: string;
+  quantity: number;
+  price: number;
+  entryPrice: number;
+  date: string;
+  notes?: string;
+  gainLoss?: number;
+  gainLossPercent?: number;
+}
+
 export interface StockInsightRequest {
   symbol: string;
   name: string;

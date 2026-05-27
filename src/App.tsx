@@ -8,7 +8,10 @@ import { AddHoldingModal } from './components/portfolio/AddHoldingModal';
 import { EditHoldingModal } from './components/portfolio/EditHoldingModal';
 import { AllocationChart } from './components/portfolio/AllocationChart';
 import { PortfolioInsights } from './components/insights/PortfolioInsights';
+import { DailyBrief } from './components/insights/DailyBrief';
 import { StockDetailPage } from './pages/StockDetailPage';
+import { JournalPage } from './pages/JournalPage';
+import { AddTradeModal } from './components/journal/AddTradeModal';
 import type { RootState } from './store';
 
 function Dashboard() {
@@ -26,6 +29,7 @@ function Dashboard() {
 
       <section id="insights" className="space-y-6">
         <PortfolioInsights />
+        <DailyBrief />
       </section>
     </div>
   );
@@ -43,10 +47,12 @@ function App() {
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/stock/:symbol" element={<StockDetailPage />} />
+        <Route path="/journal" element={<JournalPage />} />
       </Routes>
 
       <AddHoldingModal />
       <EditHoldingModal />
+      <AddTradeModal />
     </AppShell>
   );
 }
