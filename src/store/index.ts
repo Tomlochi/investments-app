@@ -4,11 +4,13 @@ import { stockApi } from '../services/stockApi';
 import { insightsApi } from '../services/insightsApi';
 import portfolioReducer from '../features/portfolio/portfolioSlice';
 import uiReducer from '../features/ui/uiSlice';
+import journalReducer from '../features/journal/journalSlice';
 
 export const store = configureStore({
   reducer: {
     portfolio: portfolioReducer,
     ui: uiReducer,
+    journal: journalReducer,
     [stockApi.reducerPath]: stockApi.reducer,
     [insightsApi.reducerPath]: insightsApi.reducer,
   },

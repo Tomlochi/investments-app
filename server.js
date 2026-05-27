@@ -131,6 +131,38 @@ app.get('/api/search', async (req, res) => {
   }
 });
 
+// Get news headlines for a comma-separated list of symbols
+app.get('/api/news', async (req, res) => {
+  const { symbols } = req.query;
+  if (!symbols || typeof symbols !== 'string') {
+    return res.status(400).json({ error: 'symbols parameter required.' });
+  }
+
+  const symbolList = symbols.split(',').map(s => s.trim()).filter(validateSymbol).slice(0, 20);
+  if (symbolList.length === 0) {
+    return res.status(400).json({ error: 'No valid symbols provided.' });
+  }
+
+  try {
+    const entries = [];
+    for (const symbol of symbolList) {
+      const result = await yahooFinance.search(symbol, {}, { validateResult: false });
+      const headlines = (result.news || [])
+        .slice(0, 5)
+        .map((n) => ({ title: n.title, publisher: n.publisher || '' }));
+      entries.push([symbol, headlines]);
+      // small pause between requests to avoid Yahoo Finance rate-limiting
+      if (entries.length < symbolList.length) {
+        await new Promise((r) => setTimeout(r, 300));
+      }
+    }
+    res.json(Object.fromEntries(entries));
+  } catch (error) {
+    console.error('News error:', error);
+    res.status(500).json({ error: 'Failed to fetch news.' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`API server running on http://localhost:${PORT}`);
 });

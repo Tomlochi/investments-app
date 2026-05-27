@@ -1,6 +1,6 @@
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
-import { LayoutDashboard, Briefcase, Sparkles, Plus } from 'lucide-react';
+import { LayoutDashboard, Briefcase, Sparkles, Plus, BookOpen } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
 import { openAddHoldingModal } from '../../features/ui/uiSlice';
@@ -16,6 +16,7 @@ const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: 'Dashboard', to: '/#dashboard' },
   { icon: Briefcase, label: 'Holdings', to: '/#holdings' },
   { icon: Sparkles, label: 'AI Insights', to: '/#insights' },
+  { icon: BookOpen, label: 'Journal', to: '/journal' },
 ];
 
 export function Sidebar() {

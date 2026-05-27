@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import type { StockInsightRequest, PortfolioInsightRequest, AIInsight, InsightSentiment } from '../types';
+import type { StockInsightRequest, PortfolioInsightRequest, AIInsight, InsightSentiment, DailyBriefResponse } from '../types';
 
 // Strip control characters and limit length to prevent prompt injection
 function sanitize(value: string, maxLen = 100): string {
@@ -73,6 +73,69 @@ Keep the response under 300 words. Be specific and actionable.`;
 
   const content = message.content[0].type === 'text' ? message.content[0].text : '';
   return parseInsightResponse(content, 'stock', request.symbol);
+}
+
+export async function getDailyBrief(
+  holdings: { symbol: string; name: string }[],
+  newsMap: Record<string, { title: string; publisher: string }[]>
+): Promise<DailyBriefResponse> {
+  const stocksSection = holdings
+    .map((h) => {
+      const sym = sanitize(h.symbol, 15);
+      const name = sanitize(h.name);
+      const headlines = (newsMap[h.symbol] ?? []);
+      const lines = headlines.length > 0
+        ? headlines.map((n) => `  - "${sanitize(n.title, 200)}" (${sanitize(n.publisher, 60)})`).join('\n')
+        : '  - No recent news available';
+      return `[${sym}] ${name}\n${lines}`;
+    })
+    .join('\n\n');
+
+  const prompt = `You are a financial news analyst producing a quick daily brief for an investor.
+
+Portfolio stocks and their latest news headlines:
+${stocksSection}
+
+Return ONLY a JSON object in this exact format with no extra text:
+{
+  "overallSummary": "One sentence capturing the overall mood across the portfolio today.",
+  "stocks": [
+    { "symbol": "SYMBOL", "brief": "One or two sentences summarising the key story for this stock today.", "sentiment": "bullish" }
+  ]
+}
+
+Rules:
+- sentiment must be one of: bullish, bearish, neutral
+- Each brief must be 1-2 sentences, no more
+- Focus on the most market-moving headline per stock
+- If no news is available for a stock, say so briefly`;
+
+  const message = await anthropic.messages.create({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 1000,
+    messages: [{ role: 'user', content: prompt }],
+  });
+
+  const text = message.content[0].type === 'text' ? message.content[0].text : '';
+  try {
+    const match = text.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(match ? match[0] : text);
+    return {
+      overallSummary: parsed.overallSummary ?? '',
+      stocks: (parsed.stocks ?? []).map((s: { symbol: string; brief: string; sentiment: string }) => ({
+        symbol: s.symbol,
+        brief: s.brief,
+        sentiment: (['bullish', 'bearish', 'neutral'].includes(s.sentiment) ? s.sentiment : 'neutral') as InsightSentiment,
+      })),
+      timestamp: new Date().toISOString(),
+    };
+  } catch {
+    return {
+      overallSummary: 'Could not generate brief.',
+      stocks: holdings.map((h) => ({ symbol: h.symbol, brief: 'Data unavailable.', sentiment: 'neutral' as InsightSentiment })),
+      timestamp: new Date().toISOString(),
+    };
+  }
 }
 
 export async function getPortfolioInsight(request: PortfolioInsightRequest): Promise<AIInsight> {
