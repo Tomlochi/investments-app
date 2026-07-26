@@ -112,7 +112,7 @@ app.get('/api/search', async (req, res) => {
       return res.status(400).json({ error: 'Query too long.' });
     }
 
-    const results = await yahooFinance.search(q);
+    const results = await yahooFinance.search(q, {}, { validateResult: false });
     const quotes = results.quotes
       .filter((quote) => quote.quoteType === 'EQUITY' || quote.quoteType === 'ETF')
       .slice(0, 10)
@@ -128,6 +128,104 @@ app.get('/api/search', async (req, res) => {
   } catch (error) {
     console.error('Search error:', error);
     res.status(500).json({ error: 'Search failed.' });
+  }
+});
+
+// Sector/industry/beta per symbol; cached 24h since profiles rarely change
+const profileCache = new Map();
+const PROFILE_TTL = 24 * 60 * 60 * 1000;
+
+app.get('/api/profile-batch', async (req, res) => {
+  const { symbols } = req.query;
+  if (!symbols || typeof symbols !== 'string') {
+    return res.status(400).json({ error: 'symbols parameter required.' });
+  }
+
+  const symbolList = [...new Set(symbols.split(',').map(s => s.trim()).filter(validateSymbol))].slice(0, 25);
+  if (symbolList.length === 0) {
+    return res.status(400).json({ error: 'No valid symbols provided.' });
+  }
+
+  try {
+    const entries = [];
+    for (const symbol of symbolList) {
+      const cached = profileCache.get(symbol);
+      if (cached && Date.now() - cached.at < PROFILE_TTL) {
+        entries.push([symbol, cached.profile]);
+        continue;
+      }
+      try {
+        const qs = await yahooFinance.quoteSummary(symbol, {
+          modules: ['assetProfile', 'summaryDetail'],
+        });
+        const profile = {
+          symbol,
+          sector: qs.assetProfile?.sector,
+          industry: qs.assetProfile?.industry,
+          beta: qs.summaryDetail?.beta,
+        };
+        profileCache.set(symbol, { profile, at: Date.now() });
+        entries.push([symbol, profile]);
+      } catch (err) {
+        console.error(`Profile error for ${symbol}:`, err.message);
+        entries.push([symbol, { symbol }]);
+      }
+      if (entries.length < symbolList.length) {
+        await new Promise((r) => setTimeout(r, 200));
+      }
+    }
+    res.json(Object.fromEntries(entries));
+  } catch (error) {
+    console.error('Profile batch error:', error);
+    res.status(500).json({ error: 'Failed to fetch profiles.' });
+  }
+});
+
+// Get daily close history for a comma-separated list of symbols (portfolio history chart)
+app.get('/api/history-batch', async (req, res) => {
+  const { symbols, range = '1y' } = req.query;
+  if (!symbols || typeof symbols !== 'string') {
+    return res.status(400).json({ error: 'symbols parameter required.' });
+  }
+
+  const symbolList = [...new Set(symbols.split(',').map(s => s.trim()).filter(validateSymbol))].slice(0, 25);
+  if (symbolList.length === 0) {
+    return res.status(400).json({ error: 'No valid symbols provided.' });
+  }
+
+  const periodMap = {
+    '1mo': 30,
+    '3mo': 90,
+    '6mo': 180,
+    '1y': 365,
+    '5y': 5 * 365,
+  };
+  const days = periodMap[range] || periodMap['1y'];
+  const period1 = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+  try {
+    const entries = await Promise.all(
+      symbolList.map(async (symbol) => {
+        try {
+          const result = await yahooFinance.chart(symbol, {
+            period1,
+            period2: new Date(),
+            interval: '1d',
+          });
+          const points = result.quotes
+            .filter((q) => q.close != null)
+            .map((q) => ({ date: q.date.toISOString().slice(0, 10), close: q.close }));
+          return [symbol, points];
+        } catch (err) {
+          console.error(`History error for ${symbol}:`, err.message);
+          return [symbol, []];
+        }
+      })
+    );
+    res.json(Object.fromEntries(entries));
+  } catch (error) {
+    console.error('History batch error:', error);
+    res.status(500).json({ error: 'Failed to fetch history.' });
   }
 });
 

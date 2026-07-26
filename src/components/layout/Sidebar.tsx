@@ -1,6 +1,6 @@
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
-import { LayoutDashboard, Briefcase, Sparkles, Plus, BookOpen } from 'lucide-react';
+import { LayoutDashboard, Briefcase, Sparkles, Plus, BookOpen, MessageSquare, Eye, Scale, Bell, Database } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
 import { openAddHoldingModal } from '../../features/ui/uiSlice';
@@ -16,7 +16,12 @@ const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: 'Dashboard', to: '/#dashboard' },
   { icon: Briefcase, label: 'Holdings', to: '/#holdings' },
   { icon: Sparkles, label: 'AI Insights', to: '/#insights' },
+  { icon: MessageSquare, label: 'Ask AI', to: '/chat' },
+  { icon: Eye, label: 'Watchlist', to: '/watchlist' },
+  { icon: Bell, label: 'Alerts', to: '/alerts' },
+  { icon: Scale, label: 'Rebalance', to: '/rebalance' },
   { icon: BookOpen, label: 'Journal', to: '/journal' },
+  { icon: Database, label: 'Data', to: '/data' },
 ];
 
 export function Sidebar() {

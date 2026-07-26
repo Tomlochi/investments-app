@@ -24,11 +24,13 @@ export function EditHoldingModal() {
 
   const [quantity, setQuantity] = useState('');
   const [purchasePrice, setPurchasePrice] = useState('');
+  const [thesis, setThesis] = useState('');
 
   useEffect(() => {
     if (holding) {
       setQuantity(holding.quantity.toString());
       setPurchasePrice(holding.purchasePrice.toString());
+      setThesis(holding.thesis ?? '');
     }
   }, [holding]);
 
@@ -40,6 +42,7 @@ export function EditHoldingModal() {
       symbol: editSymbol,
       quantity: parseFloat(quantity),
       purchasePrice: parseFloat(purchasePrice),
+      thesis,
     }));
 
     handleClose();
@@ -82,6 +85,17 @@ export function EditHoldingModal() {
                 min="0"
                 value={purchasePrice}
                 onChange={(e) => setPurchasePrice(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-thesis">Thesis (optional)</Label>
+              <textarea
+                id="edit-thesis"
+                rows={3}
+                placeholder="Why do you own this stock?"
+                value={thesis}
+                onChange={(e) => setThesis(e.target.value)}
+                className="flex min-h-[70px] w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:placeholder:text-gray-500 resize-none"
               />
             </div>
           </div>

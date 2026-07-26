@@ -7,27 +7,29 @@ import type { RootState } from '../../store';
 
 export function PortfolioSummary() {
   const holdings = useSelector((state: RootState) => state.portfolio.holdings);
+  const cashBalance = useSelector((state: RootState) => state.cash.balance);
 
   const summary = useMemo(() => {
-    let totalValue = 0;
+    let holdingsValue = 0;
     let totalCost = 0;
 
     holdings.forEach((holding) => {
       const currentPrice = holding.currentPrice ?? holding.purchasePrice;
-      totalValue += holding.quantity * currentPrice;
+      holdingsValue += holding.quantity * currentPrice;
       totalCost += holding.quantity * holding.purchasePrice;
     });
 
-    const totalGain = totalValue - totalCost;
+    const totalGain = holdingsValue - totalCost;
     const totalGainPercent = totalCost > 0 ? (totalGain / totalCost) * 100 : 0;
 
-    return { totalValue, totalCost, totalGain, totalGainPercent };
-  }, [holdings]);
+    return { totalValue: holdingsValue + cashBalance, totalCost, totalGain, totalGainPercent };
+  }, [holdings, cashBalance]);
 
   const stats = [
     {
       label: 'Total Value',
       value: formatCurrency(summary.totalValue),
+      subValue: cashBalance > 0 ? `incl. ${formatCurrency(cashBalance)} cash` : undefined,
       icon: DollarSign,
       color: 'text-blue-600 dark:text-blue-400',
       bgColor: 'bg-blue-100 dark:bg-blue-900/30',

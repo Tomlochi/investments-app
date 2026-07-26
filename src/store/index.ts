@@ -5,12 +5,20 @@ import { insightsApi } from '../services/insightsApi';
 import portfolioReducer from '../features/portfolio/portfolioSlice';
 import uiReducer from '../features/ui/uiSlice';
 import journalReducer from '../features/journal/journalSlice';
+import watchlistReducer from '../features/watchlist/watchlistSlice';
+import rebalanceReducer from '../features/rebalance/rebalanceSlice';
+import cashReducer from '../features/cash/cashSlice';
+import alertsReducer from '../features/alerts/alertsSlice';
 
 export const store = configureStore({
   reducer: {
     portfolio: portfolioReducer,
     ui: uiReducer,
     journal: journalReducer,
+    watchlist: watchlistReducer,
+    rebalance: rebalanceReducer,
+    cash: cashReducer,
+    alerts: alertsReducer,
     [stockApi.reducerPath]: stockApi.reducer,
     [insightsApi.reducerPath]: insightsApi.reducer,
   },

@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import { ArrowLeft, TrendingUp, TrendingDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { PriceChart } from '../components/stocks/PriceChart';
+import { ThesisCard } from '../components/stocks/ThesisCard';
 import { StockInsights } from '../components/insights/StockInsights';
 import { useGetQuoteQuery } from '../services/stockApi';
 import { formatCurrency, formatPercent, getChangeColor, cn } from '../lib/utils';
@@ -121,6 +122,9 @@ export function StockDetailPage() {
 
       {/* Price Chart */}
       <PriceChart symbol={symbol} title={`${symbol} Price History`} />
+
+      {/* Investment thesis + AI check */}
+      <ThesisCard holding={holding} currentPrice={currentPrice} />
 
       {/* AI Analysis — fires only when this page is visited */}
       <StockInsights holding={holding} />

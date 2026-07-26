@@ -1,11 +1,11 @@
 import { createApi, fakeBaseQuery } from '@reduxjs/toolkit/query/react';
-import { getStockInsight, getPortfolioInsight, getDailyBrief } from '../lib/claude';
-import type { AIInsight, StockInsightRequest, PortfolioInsightRequest, DailyBriefResponse } from '../types';
+import { getStockInsight, getPortfolioInsight, getDailyBrief, getRebalancePlan } from '../lib/claude';
+import type { AIInsight, StockInsightRequest, PortfolioInsightRequest, DailyBriefResponse, RebalancePlan, RebalancePlanRequest } from '../types';
 
 export const insightsApi = createApi({
   reducerPath: 'insightsApi',
   baseQuery: fakeBaseQuery(),
-  tagTypes: ['StockInsight', 'PortfolioInsight', 'DailyBrief'],
+  tagTypes: ['StockInsight', 'PortfolioInsight', 'DailyBrief', 'RebalancePlan'],
   endpoints: (builder) => ({
     getStockInsight: builder.query<AIInsight, StockInsightRequest>({
       queryFn: async (request) => {
@@ -46,6 +46,18 @@ export const insightsApi = createApi({
       },
       providesTags: ['DailyBrief'],
     }),
+
+    getRebalancePlan: builder.query<RebalancePlan, RebalancePlanRequest>({
+      queryFn: async (request) => {
+        try {
+          const plan = await getRebalancePlan(request);
+          return { data: plan };
+        } catch (error) {
+          return { error: { status: 'CUSTOM_ERROR', error: String(error) } };
+        }
+      },
+      providesTags: ['RebalancePlan'],
+    }),
   }),
 });
 
@@ -55,4 +67,5 @@ export const {
   useLazyGetStockInsightQuery,
   useLazyGetPortfolioInsightQuery,
   useLazyGetDailyBriefQuery,
+  useLazyGetRebalancePlanQuery,
 } = insightsApi;

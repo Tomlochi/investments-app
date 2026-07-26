@@ -4,6 +4,8 @@ import { BookOpen, Plus, Trash2, TrendingUp, TrendingDown, Minus } from 'lucide-
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
+import { PnLSummary } from '../components/journal/PnLSummary';
+import { JournalCoach } from '../components/journal/JournalCoach';
 import { removeTrade } from '../features/journal/journalSlice';
 import { openAddTradeModal } from '../features/ui/uiSlice';
 import { formatCurrency, formatPercent, getChangeColor, cn } from '../lib/utils';
@@ -123,6 +125,10 @@ export function JournalPage() {
           Log Trade
         </Button>
       </div>
+
+      <PnLSummary />
+
+      <JournalCoach />
 
       <Tabs value={tab} onValueChange={v => setTab(v as typeof tab)}>
         <TabsList>

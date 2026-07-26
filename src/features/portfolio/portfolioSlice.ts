@@ -43,16 +43,20 @@ const portfolioSlice = createSlice({
                          (action.payload.quantity * action.payload.purchasePrice);
         existing.quantity = totalShares;
         existing.purchasePrice = totalCost / totalShares;
+        if (action.payload.thesis) existing.thesis = action.payload.thesis;
       } else {
         state.holdings.push(action.payload);
       }
       saveToStorage(state.holdings);
     },
-    updateHolding: (state, action: PayloadAction<{ symbol: string; quantity: number; purchasePrice: number }>) => {
+    updateHolding: (state, action: PayloadAction<{ symbol: string; quantity: number; purchasePrice: number; thesis?: string }>) => {
       const holding = state.holdings.find(h => h.symbol === action.payload.symbol);
       if (holding) {
         holding.quantity = action.payload.quantity;
         holding.purchasePrice = action.payload.purchasePrice;
+        if (action.payload.thesis !== undefined) {
+          holding.thesis = action.payload.thesis.trim() || undefined;
+        }
         saveToStorage(state.holdings);
       }
     },

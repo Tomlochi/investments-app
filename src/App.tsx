@@ -7,10 +7,19 @@ import { HoldingsList } from './components/portfolio/HoldingsList';
 import { AddHoldingModal } from './components/portfolio/AddHoldingModal';
 import { EditHoldingModal } from './components/portfolio/EditHoldingModal';
 import { AllocationChart } from './components/portfolio/AllocationChart';
+import { PortfolioHistoryChart } from './components/portfolio/PortfolioHistoryChart';
+import { CashCard } from './components/portfolio/CashCard';
+import { RiskPanel } from './components/portfolio/RiskPanel';
+import { AlertWatcher } from './components/alerts/AlertWatcher';
 import { PortfolioInsights } from './components/insights/PortfolioInsights';
 import { DailyBrief } from './components/insights/DailyBrief';
 import { StockDetailPage } from './pages/StockDetailPage';
 import { JournalPage } from './pages/JournalPage';
+import { ChatPage } from './pages/ChatPage';
+import { WatchlistPage } from './pages/WatchlistPage';
+import { RebalancePage } from './pages/RebalancePage';
+import { AlertsPage } from './pages/AlertsPage';
+import { DataPage } from './pages/DataPage';
 import { AddTradeModal } from './components/journal/AddTradeModal';
 import type { RootState } from './store';
 
@@ -20,7 +29,10 @@ function Dashboard() {
       <section id="dashboard" className="space-y-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
         <PortfolioSummary />
+        <CashCard />
+        <PortfolioHistoryChart />
         <AllocationChart />
+        <RiskPanel />
       </section>
 
       <section id="holdings" className="space-y-4">
@@ -48,11 +60,17 @@ function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/stock/:symbol" element={<StockDetailPage />} />
         <Route path="/journal" element={<JournalPage />} />
+        <Route path="/chat" element={<ChatPage />} />
+        <Route path="/watchlist" element={<WatchlistPage />} />
+        <Route path="/rebalance" element={<RebalancePage />} />
+        <Route path="/alerts" element={<AlertsPage />} />
+        <Route path="/data" element={<DataPage />} />
       </Routes>
 
       <AddHoldingModal />
       <EditHoldingModal />
       <AddTradeModal />
+      <AlertWatcher />
     </AppShell>
   );
 }

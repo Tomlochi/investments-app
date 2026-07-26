@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { Sparkles, Loader2, ShieldCheck, ShieldAlert, ShieldX } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -14,13 +15,42 @@ import { Label } from '../ui/label';
 import { addTrade } from '../../features/journal/journalSlice';
 import { addHolding, updateHolding, removeHolding } from '../../features/portfolio/portfolioSlice';
 import { closeAddTradeModal } from '../../features/ui/uiSlice';
+import { getTradeCheck } from '../../lib/claude';
 import { cn, formatCurrency, formatPercent, getChangeColor } from '../../lib/utils';
 import type { RootState, AppDispatch } from '../../store';
+import type { TradeCheckResult } from '../../types';
+
+const VERDICT_STYLES = {
+  proceed: {
+    icon: ShieldCheck,
+    label: 'Looks reasonable',
+    box: 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20',
+    text: 'text-green-800 dark:text-green-300',
+  },
+  caution: {
+    icon: ShieldAlert,
+    label: 'Proceed with caution',
+    box: 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20',
+    text: 'text-amber-800 dark:text-amber-300',
+  },
+  reconsider: {
+    icon: ShieldX,
+    label: 'Worth reconsidering',
+    box: 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20',
+    text: 'text-red-800 dark:text-red-300',
+  },
+} as const;
 
 export function AddTradeModal() {
   const dispatch = useDispatch<AppDispatch>();
   const isOpen = useSelector((state: RootState) => state.ui.addTradeModalOpen);
   const holdings = useSelector((state: RootState) => state.portfolio.holdings);
+  const journalEntries = useSelector((state: RootState) => state.journal.entries);
+  const cashBalance = useSelector((state: RootState) => state.cash.balance);
+
+  const [check, setCheck] = useState<TradeCheckResult | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [checkError, setCheckError] = useState(false);
 
   const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy');
   const [symbol, setSymbol] = useState('');
@@ -66,6 +96,46 @@ export function AddTradeModal() {
     symbol.trim() && name.trim() && qty > 0 && execPrice > 0 && date &&
     (tradeType === 'buy' || costPrice > 0);
 
+  const handleAICheck = async () => {
+    if (!canSubmit || checking) return;
+    setChecking(true);
+    setCheckError(false);
+    setCheck(null);
+    try {
+      const result = await getTradeCheck({
+        trade: {
+          type: tradeType,
+          symbol: symbol.trim(),
+          name: name.trim(),
+          quantity: qty,
+          price: execPrice,
+          notes: notes.trim() || undefined,
+        },
+        holdings: holdings.map(h => ({
+          symbol: h.symbol,
+          quantity: h.quantity,
+          purchasePrice: h.purchasePrice,
+          currentPrice: h.currentPrice,
+        })),
+        recentTrades: journalEntries.slice(0, 10).map(t => ({
+          type: t.type,
+          symbol: t.symbol,
+          quantity: t.quantity,
+          price: t.price,
+          date: t.date,
+          notes: t.notes,
+        })),
+        cashBalance,
+      });
+      setCheck(result);
+    } catch (e) {
+      console.error('Trade check error:', e);
+      setCheckError(true);
+    } finally {
+      setChecking(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
@@ -109,6 +179,9 @@ export function AddTradeModal() {
     setEntryPrice('');
     setDate(new Date().toISOString().split('T')[0]);
     setNotes('');
+    setCheck(null);
+    setChecking(false);
+    setCheckError(false);
     dispatch(closeAddTradeModal());
   };
 
@@ -262,9 +335,44 @@ export function AddTradeModal() {
                 className="flex min-h-[80px] w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:placeholder:text-gray-500 resize-none"
               />
             </div>
+            {/* AI second opinion */}
+            {check && !checking && (() => {
+              const style = VERDICT_STYLES[check.verdict];
+              return (
+                <div className={cn('rounded-md border p-3 text-sm', style.box)}>
+                  <div className={cn('flex items-center gap-1.5 font-semibold mb-1', style.text)}>
+                    <style.icon className="h-4 w-4" />
+                    {style.label}
+                  </div>
+                  <p className="text-gray-700 dark:text-gray-300">{check.assessment}</p>
+                  {check.considerations.length > 0 && (
+                    <ul className="list-disc pl-5 mt-2 space-y-0.5 text-gray-600 dark:text-gray-400">
+                      {check.considerations.map((c, i) => (
+                        <li key={i}>{c}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              );
+            })()}
+            {checkError && (
+              <p className="text-sm text-red-600 dark:text-red-400">
+                AI check failed. You can still log the trade.
+              </p>
+            )}
           </div>
 
           <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              className="gap-1.5 mr-auto"
+              disabled={!canSubmit || checking}
+              onClick={handleAICheck}
+            >
+              {checking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              {checking ? 'Checking...' : 'AI second opinion'}
+            </Button>
             <Button type="button" variant="outline" onClick={handleClose}>Cancel</Button>
             <Button
               type="submit"

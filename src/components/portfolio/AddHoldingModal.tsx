@@ -26,6 +26,7 @@ export function AddHoldingModal() {
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
   const [quantity, setQuantity] = useState('');
   const [purchasePrice, setPurchasePrice] = useState('');
+  const [thesis, setThesis] = useState('');
   const [showResults, setShowResults] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -75,6 +76,7 @@ export function AddHoldingModal() {
       quantity: parseFloat(quantity),
       purchasePrice: parseFloat(purchasePrice),
       currentPrice: selectedQuote?.regularMarketPrice,
+      thesis: thesis.trim() || undefined,
     }));
 
     handleClose();
@@ -86,6 +88,7 @@ export function AddHoldingModal() {
     setSelectedSymbol(null);
     setQuantity('');
     setPurchasePrice('');
+    setThesis('');
     setShowResults(false);
     dispatch(closeAddHoldingModal());
   };
@@ -191,6 +194,18 @@ export function AddHoldingModal() {
                   onChange={(e) => setPurchasePrice(e.target.value)}
                 />
               </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="thesis" className="text-gray-900 dark:text-gray-100">Thesis (optional)</Label>
+              <textarea
+                id="thesis"
+                rows={2}
+                placeholder="Why are you buying this? The AI can check later whether your reasoning still holds."
+                value={thesis}
+                onChange={(e) => setThesis(e.target.value)}
+                className="flex min-h-[60px] w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:placeholder:text-gray-500 resize-none"
+              />
             </div>
           </div>
           <DialogFooter>
