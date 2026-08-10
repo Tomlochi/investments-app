@@ -19,6 +19,7 @@
 - **Persistence:** `localStorage` only. Every slice follows the existing `loadFromStorage` / `saveToStorage` pattern from `src/features/cash/cashSlice.ts`.
 - **Path alias:** `@/` maps to `src/`. Existing code uses relative imports inside `src/features` and `src/lib` — match the file you are editing.
 - **No new runtime dependencies.** vitest is the only addition, and it is a devDependency.
+- **Never commit or push.** Stage your work and stop. The user reviews every change before it enters git history. Each task ends with a stage-and-report step, never a commit — offer the commit message, do not run it.
 
 ---
 
@@ -37,8 +38,10 @@
 - [ ] **Step 1: Install vitest**
 
 ```bash
-npm install -D vitest@^3
+npm install -D vitest@^4
 ```
+
+Must be v4, not v3. Vitest 3 bundles its own rollup-based Vite; this project runs Vite 8, which is rolldown-based. With both present, `defineConfig` from `vitest/config` types the `plugins` array against the nested Vite while `@vitejs/plugin-react` produces the outer one, and `tsc -b` fails with `Type 'Plugin<any>[]' is not assignable to type 'PluginOption[]'`. Vitest 4 declares `vite ^8` as a peer and reuses the project's install, so there is no second copy and no type conflict.
 
 - [ ] **Step 2: Add the test script**
 
@@ -230,12 +233,18 @@ export function realizedR(entry: number, initialStop: number, exit: number): num
 Run: `npm test`
 Expected: PASS, 9 tests.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 8: Stage and stop for review**
+
+Stage the work, then **stop. Do not commit.** The user reviews every change before it enters git history.
 
 ```bash
 git add package.json package-lock.json vite.config.ts src/lib/planMath.ts src/lib/planMath.test.ts
-git commit -m "feat: add vitest and position sizing math"
+git status
 ```
+
+Report what changed and offer this commit message for their approval:
+
+> `feat: add vitest and position sizing math`
 
 ---
 
@@ -471,12 +480,18 @@ and add to the `reducer` object, after `alerts: alertsReducer,`:
 Run: `npm run build`
 Expected: succeeds with no TypeScript errors.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Stage and stop for review**
+
+Stage the work, then **stop. Do not commit.** The user reviews every change before it enters git history.
 
 ```bash
 git add src/types/index.ts src/features/tradeplan src/features/settings src/store/index.ts
-git commit -m "feat: add trade plan and settings slices"
+git status
 ```
+
+Report what changed and offer this commit message for their approval:
+
+> `feat: add trade plan and settings slices`
 
 ---
 
@@ -745,12 +760,18 @@ export function bySetup(plans: TradePlan[]): SetupStats[] {
 Run: `npm test`
 Expected: PASS, all tests including the 9 from Task 1.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Stage and stop for review**
+
+Stage the work, then **stop. Do not commit.** The user reviews every change before it enters git history.
 
 ```bash
 git add src/lib/planMath.ts src/lib/planMath.test.ts
-git commit -m "feat: add scorecard math for expectancy, adherence and bad exits"
+git status
 ```
+
+Report what changed and offer this commit message for their approval:
+
+> `feat: add scorecard math for expectancy, adherence and bad exits`
 
 ---
 
@@ -992,12 +1013,18 @@ curl -s localhost:3001/api/indicators/AAPL | head -c 400
 
 Expected: JSON with six numeric fields, `atr14` a small positive number and `rsi14` between 0 and 100.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 7: Stage and stop for review**
+
+Stage the work, then **stop. Do not commit.** The user reviews every change before it enters git history.
 
 ```bash
 git add server/indicators.js server/indicators.test.js server.js
-git commit -m "feat: add ATR, RSI and SMA indicators endpoint"
+git status
 ```
+
+Report what changed and offer this commit message for their approval:
+
+> `feat: add ATR, RSI and SMA indicators endpoint`
 
 ---
 
@@ -1082,12 +1109,18 @@ Expected: succeeds. No import site should need editing — `../lib/claude` now r
 Run: `npm run lint`
 Expected: no new errors.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Stage and stop for review**
+
+Stage the work, then **stop. Do not commit.** The user reviews every change before it enters git history.
 
 ```bash
 git add -A src/lib
-git commit -m "refactor: split claude.ts into a directory by call type"
+git status
 ```
+
+Report what changed and offer this commit message for their approval:
+
+> `refactor: split claude.ts into a directory by call type`
 
 ---
 
@@ -1206,12 +1239,18 @@ Expected: both succeed with no unused-import warnings.
 
 Then run `npm run dev:all`, open the dashboard, and confirm the AI Insights card and Daily Brief both render content rather than an error.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 8: Stage and stop for review**
+
+Stage the work, then **stop. Do not commit.** The user reviews every change before it enters git history.
 
 ```bash
 git add src/lib/claude
-git commit -m "feat: migrate all Claude calls to claude-opus-5 with structured outputs"
+git status
 ```
+
+Report what changed and offer this commit message for their approval:
+
+> `feat: migrate all Claude calls to claude-opus-5 with structured outputs`
 
 ---
 
@@ -1271,12 +1310,18 @@ In `src/store/index.ts`, import `indicatorsApi`, add `[indicatorsApi.reducerPath
 Run: `npm run build`
 Expected: succeeds.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Stage and stop for review**
+
+Stage the work, then **stop. Do not commit.** The user reviews every change before it enters git history.
 
 ```bash
 git add src/services/indicatorsApi.ts src/types/index.ts src/store/index.ts
-git commit -m "feat: add indicators RTK Query service"
+git status
 ```
+
+Report what changed and offer this commit message for their approval:
+
+> `feat: add indicators RTK Query service`
 
 ---
 
@@ -1407,12 +1452,18 @@ function Figure({ label, value, danger }: { label: string; value: string; danger
 Run: `npm run build`
 Expected: succeeds. (The component has no consumer yet — Task 9 adds one.)
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 3: Stage and stop for review**
+
+Stage the work, then **stop. Do not commit.** The user reviews every change before it enters git history.
 
 ```bash
 git add src/components/plans/SizingCalculator.tsx
-git commit -m "feat: add position sizing calculator component"
+git status
 ```
+
+Report what changed and offer this commit message for their approval:
+
+> `feat: add position sizing calculator component`
 
 ---
 
@@ -1521,12 +1572,18 @@ Run: `npm run dev:all`, open `http://localhost:5173/plans`, create a plan. Confi
 - Setting a stop above entry blocks submit with the error message.
 - The plan appears under Ideas and survives a page reload.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 7: Stage and stop for review**
+
+Stage the work, then **stop. Do not commit.** The user reviews every change before it enters git history.
 
 ```bash
 git add src/components/plans src/pages/PlansPage.tsx src/features/ui/uiSlice.ts src/App.tsx src/components/layout/Sidebar.tsx
-git commit -m "feat: add plan form modal and plans page"
+git status
 ```
+
+Report what changed and offer this commit message for their approval:
+
+> `feat: add plan form modal and plans page`
 
 ---
 
@@ -1595,12 +1652,18 @@ Run `npm run dev:all`. From an idea plan, click "Mark opened" and submit. Confir
 - A buy entry appears on the Journal page.
 - Reloading preserves all three.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 4: Stage and stop for review**
+
+Stage the work, then **stop. Do not commit.** The user reviews every change before it enters git history.
 
 ```bash
 git add src/components/plans src/pages/PlansPage.tsx src/App.tsx
-git commit -m "feat: open a plan, writing the holding and journal entry"
+git status
 ```
+
+Report what changed and offer this commit message for their approval:
+
+> `feat: open a plan, writing the holding and journal entry`
 
 ---
 
@@ -1672,12 +1735,18 @@ Add a "Close plan" button to `PlanCard` for `status === 'open'`, driving a `clos
 
 Close an open plan at a profit. Confirm: the plan moves to Closed, the holding is removed, a sell entry with the correct gain appears on the Journal page, and the Journal P&L summary updates.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 4: Stage and stop for review**
+
+Stage the work, then **stop. Do not commit.** The user reviews every change before it enters git history.
 
 ```bash
 git add src/components/plans src/pages/PlansPage.tsx
-git commit -m "feat: close a plan, writing the sell entry and updating the holding"
+git status
 ```
+
+Report what changed and offer this commit message for their approval:
+
+> `feat: close a plan, writing the sell entry and updating the holding`
 
 ---
 
@@ -1992,12 +2061,18 @@ Sector concentration for `sameSectorPercent` comes from the existing `/api/profi
 
 Create a deliberately bad plan — 60% of equity in one position with a 1.1 reward-to-risk. Confirm the automated flags appear in the response reasoning and the verdict is `caution` or `reconsider`. Then confirm that with the dev server's network disabled, saving still works and shows the fallback message.
 
-- [ ] **Step 11: Commit**
+- [ ] **Step 11: Stage and stop for review**
+
+Stage the work, then **stop. Do not commit.** The user reviews every change before it enters git history.
 
 ```bash
 git add src/lib/planChecks.ts src/lib/planChecks.test.ts src/lib/claude src/types/index.ts src/services/insightsApi.ts src/components/plans/PlanFormModal.tsx
-git commit -m "feat: add pre-trade devil's advocate review"
+git status
 ```
+
+Report what changed and offer this commit message for their approval:
+
+> `feat: add pre-trade devil's advocate review`
 
 ---
 
@@ -2155,12 +2230,18 @@ In the `Dashboard` function in `src/App.tsx`, insert `<OpenPositionsPanel />` im
 
 With an open plan, confirm the R and the progress bar render, and that "Ask AI" returns an action with reasoning. Manually edit the plan's stop above the current price and confirm the "Below your stop" badge appears.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 8: Stage and stop for review**
+
+Stage the work, then **stop. Do not commit.** The user reviews every change before it enters git history.
 
 ```bash
 git add src/lib/claude src/types/index.ts src/services/insightsApi.ts src/components/plans/OpenPositionsPanel.tsx src/App.tsx
-git commit -m "feat: add exit advisor and open positions panel"
+git status
 ```
+
+Report what changed and offer this commit message for their approval:
+
+> `feat: add exit advisor and open positions panel`
 
 ---
 
@@ -2307,12 +2388,18 @@ In `PlanCard`, for `status === 'closed'`, render the realized R, the process sco
 
 Close a plan exactly at its stop with `exitReason: 'stop-hit'`. Confirm the score is high despite the loss — that inversion is the feature working. Then close another at a profit with `exitReason: 'discretionary'` well below target and confirm the score is lower.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 8: Stage and stop for review**
+
+Stage the work, then **stop. Do not commit.** The user reviews every change before it enters git history.
 
 ```bash
 git add src/lib/claude src/types/index.ts src/services/insightsApi.ts src/components/plans
-git commit -m "feat: add post-trade process grader"
+git status
 ```
+
+Report what changed and offer this commit message for their approval:
+
+> `feat: add post-trade process grader`
 
 ---
 
@@ -2359,12 +2446,18 @@ Add the `/performance` route and a Sidebar link (a `lucide-react` icon such as `
 
 With at least two closed plans of differing outcomes, confirm the dashboard shows non-null coverage, adherence, and expectancy, that `/performance` matches, and that a holding with no open plan shows the amber badge.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 7: Stage and stop for review**
+
+Stage the work, then **stop. Do not commit.** The user reviews every change before it enters git history.
 
 ```bash
 git add src/components/performance src/pages/PerformancePage.tsx src/App.tsx src/components/layout/Sidebar.tsx src/components/portfolio/HoldingsList.tsx
-git commit -m "feat: add discipline scorecard and performance page"
+git status
 ```
+
+Report what changed and offer this commit message for their approval:
+
+> `feat: add discipline scorecard and performance page`
 
 ---
 
@@ -2410,12 +2503,18 @@ npm test && npm run build && npm run lint
 
 Expected: all three succeed.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Stage and stop for review**
+
+Stage the work, then **stop. Do not commit.** The user reviews every change before it enters git history.
 
 ```bash
 git add src/pages/DataPage.tsx src/components/portfolio/HoldingsList.tsx
-git commit -m "fix: include trade plans in backups and guard orphaned plans"
+git status
 ```
+
+Report what changed and offer this commit message for their approval:
+
+> `fix: include trade plans in backups and guard orphaned plans`
 
 ---
 

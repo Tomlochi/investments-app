@@ -7,6 +7,8 @@ interface UIState {
   editHoldingSymbol: string | null;
   selectedStock: string | null;
   addTradeModalOpen: boolean;
+  planModalOpen: boolean;
+  editingPlanId: string | null;
 }
 
 const initialState: UIState = {
@@ -16,6 +18,8 @@ const initialState: UIState = {
   editHoldingSymbol: null,
   selectedStock: null,
   addTradeModalOpen: false,
+  planModalOpen: false,
+  editingPlanId: null,
 };
 
 const uiSlice = createSlice({
@@ -56,6 +60,14 @@ const uiSlice = createSlice({
     closeAddTradeModal: (state) => {
       state.addTradeModalOpen = false;
     },
+    openPlanModal: (state, action: PayloadAction<string | undefined>) => {
+      state.editingPlanId = action.payload ?? null;
+      state.planModalOpen = true;
+    },
+    closePlanModal: (state) => {
+      state.planModalOpen = false;
+      state.editingPlanId = null;
+    },
   },
 });
 
@@ -70,6 +82,8 @@ export const {
   selectStock,
   openAddTradeModal,
   closeAddTradeModal,
+  openPlanModal,
+  closePlanModal,
 } = uiSlice.actions;
 
 export default uiSlice.reducer;

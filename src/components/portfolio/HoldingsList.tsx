@@ -7,12 +7,16 @@ import { Button } from '../ui/button';
 import { useGetQuoteQuery } from '../../services/stockApi';
 import { updateCurrentPrice, removeHolding } from '../../features/portfolio/portfolioSlice';
 import { openEditHoldingModal } from '../../features/ui/uiSlice';
+import { closePlan } from '../../features/tradeplan/tradePlanSlice';
 import { formatCurrency, formatPercent, getChangeColor, cn } from '../../lib/utils';
 import type { RootState, AppDispatch } from '../../store';
 import type { Stock } from '../../types';
 
 function HoldingRow({ holding }: { holding: Stock }) {
   const dispatch = useDispatch<AppDispatch>();
+  const openPlanForSymbol = useSelector((state: RootState) =>
+    state.tradePlan.plans.find(p => p.status === 'open' && p.symbol === holding.symbol)
+  );
   const { data: quote } = useGetQuoteQuery(holding.symbol, {
     pollingInterval: 60000,
   });
@@ -24,6 +28,25 @@ function HoldingRow({ holding }: { holding: Stock }) {
   }, [quote, holding.symbol, dispatch]);
 
   const currentPrice = quote?.regularMarketPrice ?? holding.currentPrice ?? holding.purchasePrice;
+
+  // Deleting a holding out from under an open plan is by definition an unplanned
+  // exit, so it is recorded as one rather than leaving the plan orphaned.
+  const handleDelete = () => {
+    if (openPlanForSymbol) {
+      const ok = window.confirm(
+        `${holding.symbol} has an open trade plan. Deleting the holding will close that plan as a discretionary exit at ${currentPrice.toFixed(2)}. Continue?`
+      );
+      if (!ok) return;
+      dispatch(
+        closePlan({
+          id: openPlanForSymbol.id,
+          actualExitPrice: currentPrice,
+          exitReason: 'discretionary',
+        })
+      );
+    }
+    dispatch(removeHolding(holding.symbol));
+  };
   const marketValue = holding.quantity * currentPrice;
   const costBasis = holding.quantity * holding.purchasePrice;
   const gain = marketValue - costBasis;
@@ -38,6 +61,16 @@ function HoldingRow({ holding }: { holding: Stock }) {
           </div>
           <div className="text-sm text-gray-500 dark:text-gray-400">{holding.name}</div>
         </Link>
+        <span
+          className={cn(
+            'mt-1 inline-block rounded px-2 py-0.5 text-xs font-medium',
+            openPlanForSymbol
+              ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200'
+              : 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-200'
+          )}
+        >
+          {openPlanForSymbol ? 'Planned' : 'Unplanned'}
+        </span>
       </td>
       <td className="p-4 align-middle text-right text-gray-900 dark:text-gray-100">{holding.quantity}</td>
       <td className="p-4 align-middle text-right text-gray-900 dark:text-gray-100">{formatCurrency(holding.purchasePrice)}</td>
@@ -64,7 +97,7 @@ function HoldingRow({ holding }: { holding: Stock }) {
           <Button variant="ghost" size="icon" onClick={() => dispatch(openEditHoldingModal(holding.symbol))}>
             <Pencil className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => dispatch(removeHolding(holding.symbol))}>
+          <Button variant="ghost" size="icon" onClick={() => handleDelete()}>
             <Trash2 className="h-4 w-4 text-red-500" />
           </Button>
         </div>

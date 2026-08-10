@@ -20,7 +20,12 @@ import { WatchlistPage } from './pages/WatchlistPage';
 import { RebalancePage } from './pages/RebalancePage';
 import { AlertsPage } from './pages/AlertsPage';
 import { DataPage } from './pages/DataPage';
+import { PlansPage } from './pages/PlansPage';
+import { PerformancePage } from './pages/PerformancePage';
 import { AddTradeModal } from './components/journal/AddTradeModal';
+import { PlanFormModal } from './components/plans/PlanFormModal';
+import { OpenPositionsPanel } from './components/plans/OpenPositionsPanel';
+import { DisciplineCard } from './components/performance/DisciplineCard';
 import type { RootState } from './store';
 
 function Dashboard() {
@@ -29,7 +34,9 @@ function Dashboard() {
       <section id="dashboard" className="space-y-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
         <PortfolioSummary />
+        <OpenPositionsPanel />
         <CashCard />
+        <DisciplineCard />
         <PortfolioHistoryChart />
         <AllocationChart />
         <RiskPanel />
@@ -65,11 +72,14 @@ function App() {
         <Route path="/rebalance" element={<RebalancePage />} />
         <Route path="/alerts" element={<AlertsPage />} />
         <Route path="/data" element={<DataPage />} />
+        <Route path="/plans" element={<PlansPage />} />
+        <Route path="/performance" element={<PerformancePage />} />
       </Routes>
 
       <AddHoldingModal />
       <EditHoldingModal />
       <AddTradeModal />
+      <PlanFormModal />
       <AlertWatcher />
     </AppShell>
   );
