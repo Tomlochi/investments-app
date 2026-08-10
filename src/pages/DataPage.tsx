@@ -15,6 +15,8 @@ const BACKUP_KEYS = [
   'rebalance-targets',
   'cash-state',
   'price-alerts',
+  'trade-plans',
+  'trade-settings',
   'theme',
 ] as const;
 
@@ -197,7 +199,7 @@ export function DataPage() {
             </Button>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            All your data lives in this browser's localStorage — download a backup regularly. The JSON backup includes holdings, journal, watchlist, rebalance targets, cash, and alerts.
+            All your data lives in this browser's localStorage — download a backup regularly. The JSON backup includes holdings, journal, watchlist, rebalance targets, cash, alerts, trade plans, and risk settings.
           </p>
         </CardContent>
       </Card>

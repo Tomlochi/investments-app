@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { rateLimit } from 'express-rate-limit';
 import YahooFinance from 'yahoo-finance2';
+import { sma, rsi14, atr14, fiftyTwoWeekPosition } from './server/indicators.js';
 const yahooFinance = new YahooFinance();
 
 const app = express();
@@ -135,6 +136,9 @@ app.get('/api/search', async (req, res) => {
 const profileCache = new Map();
 const PROFILE_TTL = 24 * 60 * 60 * 1000;
 
+const indicatorCache = new Map();
+const INDICATOR_TTL = 24 * 60 * 60 * 1000;
+
 app.get('/api/profile-batch', async (req, res) => {
   const { symbols } = req.query;
   if (!symbols || typeof symbols !== 'string') {
@@ -226,6 +230,48 @@ app.get('/api/history-batch', async (req, res) => {
   } catch (error) {
     console.error('History batch error:', error);
     res.status(500).json({ error: 'Failed to fetch history.' });
+  }
+});
+
+// Technical indicators for one symbol, derived from one year of daily bars.
+app.get('/api/indicators/:symbol', async (req, res) => {
+  const { symbol } = req.params;
+  if (!validateSymbol(symbol)) {
+    return res.status(400).json({ error: 'Invalid symbol.' });
+  }
+
+  const cached = indicatorCache.get(symbol);
+  if (cached && Date.now() - cached.at < INDICATOR_TTL) {
+    return res.json(cached.indicators);
+  }
+
+  try {
+    const period1 = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+    const result = await yahooFinance.chart(symbol, {
+      period1,
+      period2: new Date(),
+      interval: '1d',
+    });
+
+    const bars = result.quotes.filter(
+      (q) => q.close != null && q.high != null && q.low != null
+    );
+    const closes = bars.map((b) => b.close);
+
+    const indicators = {
+      atr14: atr14(bars),
+      sma20: sma(closes, 20),
+      sma50: sma(closes, 50),
+      sma200: sma(closes, 200),
+      rsi14: rsi14(closes),
+      fiftyTwoWeekPosition: fiftyTwoWeekPosition(closes),
+    };
+
+    indicatorCache.set(symbol, { indicators, at: Date.now() });
+    res.json(indicators);
+  } catch (error) {
+    console.error(`Indicators error for ${symbol}:`, error.message);
+    res.status(500).json({ error: 'Failed to compute indicators.' });
   }
 });
 

@@ -296,3 +296,144 @@ export interface PortfolioInsightRequest {
   totalGain: number;
   totalGainPercent: number;
 }
+
+export type PlanStatus = 'idea' | 'open' | 'closed';
+export type SetupType = 'breakout' | 'pullback' | 'earnings' | 'value' | 'core-add' | 'other';
+export type ExitReason = 'stop-hit' | 'target-hit' | 'thesis-broken' | 'discretionary';
+
+export interface ProcessGrade {
+  score: number;
+  followedPlan: string[];
+  brokePlan: string[];
+  lesson: string;
+  timestamp: string;
+}
+
+export interface TradePlan {
+  id: string;
+  symbol: string;
+  name: string;
+  status: PlanStatus;
+  setup: SetupType;
+  thesis: string;
+  invalidation: string;
+  entryLow: number;
+  entryHigh: number;
+  /** Live stop. May be raised while the plan is open. */
+  stopPrice: number;
+  target1: number;
+  target2?: number;
+  plannedShares: number;
+  riskPercent: number;
+  conviction: 1 | 2 | 3 | 4 | 5;
+  createdAt: string;
+
+  actualEntryPrice?: number;
+  actualShares?: number;
+  /** Snapshot of stopPrice at open. Never mutated. All R math uses this. */
+  initialStopPrice?: number;
+  openedAt?: string;
+
+  actualExitPrice?: number;
+  closedAt?: string;
+  exitReason?: ExitReason;
+  grade?: ProcessGrade;
+}
+
+export interface TradeSettings {
+  riskPerTradePercent: number;
+  maxPositionPercent: number;
+}
+
+export interface Indicators {
+  atr14: number | null;
+  sma20: number | null;
+  sma50: number | null;
+  sma200: number | null;
+  rsi14: number | null;
+  fiftyTwoWeekPosition: number | null;
+}
+
+export interface DevilsAdvocateRequest {
+  plan: {
+    symbol: string;
+    name: string;
+    setup: string;
+    thesis: string;
+    invalidation: string;
+    entryHigh: number;
+    stopPrice: number;
+    target1: number;
+    shares: number;
+    conviction: number;
+  };
+  checkFlags: string[];
+  holdings: { symbol: string; quantity: number; purchasePrice: number; currentPrice?: number }[];
+  cashBalance: number;
+  openPlans: { symbol: string; setup: string; thesis: string }[];
+  /** Most recent graded closes, newest first. Feeds repeatedMistakes. */
+  pastLessons: { symbol: string; date: string; setup: string; score: number; lesson: string }[];
+  indicators: Indicators | null;
+  headlines: { title: string; publisher: string }[];
+}
+
+export interface DevilsAdvocateResult {
+  verdict: TradeCheckVerdict;
+  bearCase: string[];
+  planCritique: string[];
+  repeatedMistakes: string[];
+  timestamp: string;
+}
+
+export type ExitAction = 'hold' | 'trim' | 'exit' | 'raise-stop';
+
+export interface ExitAdviceRequest {
+  plan: {
+    symbol: string;
+    name: string;
+    setup: string;
+    thesis: string;
+    invalidation: string;
+    entryPrice: number;
+    initialStopPrice: number;
+    currentStopPrice: number;
+    target1: number;
+    shares: number;
+    openedAt: string;
+  };
+  currentPrice: number;
+  currentR: number | null;
+  daysHeld: number;
+  indicators: Indicators | null;
+  headlines: { title: string; publisher: string }[];
+}
+
+export interface ExitAdviceResult {
+  action: ExitAction;
+  reasoning: string;
+  suggestedStop?: number;
+  timestamp: string;
+}
+
+export interface ProcessGradeRequest {
+  plan: {
+    symbol: string;
+    name: string;
+    setup: string;
+    thesis: string;
+    invalidation: string;
+    entryHigh: number;
+    initialStopPrice: number;
+    target1: number;
+    plannedShares: number;
+    conviction: number;
+  };
+  execution: {
+    actualEntryPrice: number;
+    actualShares: number;
+    actualExitPrice: number;
+    exitReason: ExitReason;
+    daysHeld: number;
+    realizedR: number | null;
+  };
+}

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Sparkles, Loader2, ShieldCheck, ShieldAlert, ShieldX } from 'lucide-react';
+import { Search, Sparkles, Loader2, ShieldCheck, ShieldAlert, ShieldX } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -15,10 +15,11 @@ import { Label } from '../ui/label';
 import { addTrade } from '../../features/journal/journalSlice';
 import { addHolding, updateHolding, removeHolding } from '../../features/portfolio/portfolioSlice';
 import { closeAddTradeModal } from '../../features/ui/uiSlice';
+import { useSearchStocksQuery } from '../../services/stockApi';
 import { getTradeCheck } from '../../lib/claude';
 import { cn, formatCurrency, formatPercent, getChangeColor } from '../../lib/utils';
 import type { RootState, AppDispatch } from '../../store';
-import type { TradeCheckResult } from '../../types';
+import type { SearchResult, TradeCheckResult } from '../../types';
 
 const VERDICT_STYLES = {
   proceed: {
@@ -61,14 +62,54 @@ export function AddTradeModal() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
 
+  const [debouncedSymbol, setDebouncedSymbol] = useState('');
+  const [showResults, setShowResults] = useState(false);
+  const [picked, setPicked] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Debounce symbol lookups; skip once a result has been picked
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSymbol(picked ? '' : symbol.trim());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [symbol, picked]);
+
+  const { data: searchResults, isFetching: isSearching } = useSearchStocksQuery(debouncedSymbol, {
+    skip: debouncedSymbol.length < 1,
+  });
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowResults(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const handleSymbolChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const upper = e.target.value.toUpperCase();
     setSymbol(upper);
+    setPicked(false);
+    setShowResults(upper.length >= 1);
     const match = holdings.find(h => h.symbol === upper);
     if (match) {
       setName(match.name);
       if (tradeType === 'sell') setEntryPrice(match.purchasePrice.toFixed(2));
     }
+  };
+
+  const handleSelectResult = (result: SearchResult) => {
+    setSymbol(result.symbol);
+    setName(result.shortname || result.longname || result.symbol);
+    setPicked(true);
+    setShowResults(false);
+    setDebouncedSymbol('');
+    const match = holdings.find(h => h.symbol === result.symbol);
+    if (match && tradeType === 'sell') setEntryPrice(match.purchasePrice.toFixed(2));
   };
 
   const handleTypeChange = (type: 'buy' | 'sell') => {
@@ -92,9 +133,19 @@ export function AddTradeModal() {
   const gainLossPercent =
     costPrice > 0 && gainLoss !== null ? ((execPrice - costPrice) / costPrice) * 100 : null;
 
-  const canSubmit =
-    symbol.trim() && name.trim() && qty > 0 && execPrice > 0 && date &&
-    (tradeType === 'buy' || costPrice > 0);
+  // Name is optional — falls back to the symbol, so an unlisted ticker is still loggable
+  const canSubmit = Boolean(
+    symbol.trim() && qty > 0 && execPrice > 0 && date &&
+    (tradeType === 'buy' || costPrice > 0)
+  );
+
+  const missing = [
+    !symbol.trim() && 'a symbol',
+    !(qty > 0) && 'share count',
+    !(execPrice > 0) && (tradeType === 'buy' ? 'a buy price' : 'a sell price'),
+    tradeType === 'sell' && !(costPrice > 0) && 'an entry price',
+    !date && 'a date',
+  ].filter(Boolean) as string[];
 
   const handleAICheck = async () => {
     if (!canSubmit || checking) return;
@@ -106,7 +157,7 @@ export function AddTradeModal() {
         trade: {
           type: tradeType,
           symbol: symbol.trim(),
-          name: name.trim(),
+          name: name.trim() || symbol.trim(),
           quantity: qty,
           price: execPrice,
           notes: notes.trim() || undefined,
@@ -140,10 +191,11 @@ export function AddTradeModal() {
     e.preventDefault();
     if (!canSubmit) return;
     const sym = symbol.trim();
+    const displayName = name.trim() || sym;
     dispatch(addTrade({
       type: tradeType,
       symbol: sym,
-      name: name.trim(),
+      name: displayName,
       quantity: qty,
       price: execPrice,
       entryPrice: tradeType === 'sell' ? costPrice : execPrice,
@@ -154,7 +206,7 @@ export function AddTradeModal() {
     }));
 
     if (tradeType === 'buy') {
-      dispatch(addHolding({ symbol: sym, name: name.trim(), quantity: qty, purchasePrice: execPrice }));
+      dispatch(addHolding({ symbol: sym, name: displayName, quantity: qty, purchasePrice: execPrice }));
     } else {
       const holding = holdings.find(h => h.symbol === sym);
       if (holding) {
@@ -182,6 +234,9 @@ export function AddTradeModal() {
     setCheck(null);
     setChecking(false);
     setCheckError(false);
+    setDebouncedSymbol('');
+    setShowResults(false);
+    setPicked(false);
     dispatch(closeAddTradeModal());
   };
 
@@ -230,16 +285,52 @@ export function AddTradeModal() {
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="symbol" className="text-gray-900 dark:text-gray-100">Symbol</Label>
-                <Input
-                  id="symbol"
-                  placeholder="AAPL"
-                  value={symbol}
-                  onChange={handleSymbolChange}
-                  autoComplete="off"
-                />
+                <div className="relative" ref={dropdownRef}>
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <Input
+                    id="symbol"
+                    placeholder="AAPL"
+                    value={symbol}
+                    onChange={handleSymbolChange}
+                    onFocus={() => {
+                      if (symbol.length >= 1 && !picked) setShowResults(true);
+                    }}
+                    className="pl-9"
+                    autoComplete="off"
+                  />
+                  {isSearching && (
+                    <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-blue-500" />
+                  )}
+                  {showResults && searchResults && searchResults.length > 0 && (
+                    <div className="absolute z-[100] mt-1 max-h-60 w-[calc(200%+1rem)] overflow-auto rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                      {searchResults.map(result => (
+                        <button
+                          key={result.symbol}
+                          type="button"
+                          className="flex w-full items-center justify-between gap-2 px-3 py-2 text-sm text-gray-900 hover:bg-blue-50 first:rounded-t-md last:rounded-b-md dark:text-gray-100 dark:hover:bg-gray-700"
+                          onClick={() => handleSelectResult(result)}
+                        >
+                          <span className="font-semibold text-blue-600 dark:text-blue-400">{result.symbol}</span>
+                          <span className="truncate text-xs text-gray-600 dark:text-gray-400">
+                            {result.shortname || result.longname}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {showResults && debouncedSymbol && !isSearching && searchResults?.length === 0 && (
+                    <div className="absolute z-[100] mt-1 w-[calc(200%+1rem)] rounded-md border border-gray-200 bg-white p-3 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        No match for "{debouncedSymbol}" — you can still log it manually.
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="name" className="text-gray-900 dark:text-gray-100">Company Name</Label>
+                <Label htmlFor="name" className="text-gray-900 dark:text-gray-100">
+                  Company Name <span className="text-xs font-normal text-gray-500">(optional)</span>
+                </Label>
                 <Input
                   id="name"
                   placeholder="Apple Inc."
@@ -358,6 +449,11 @@ export function AddTradeModal() {
             {checkError && (
               <p className="text-sm text-red-600 dark:text-red-400">
                 AI check failed. You can still log the trade.
+              </p>
+            )}
+            {missing.length > 0 && (
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Still need {missing.join(', ')} before this trade can be logged.
               </p>
             )}
           </div>
