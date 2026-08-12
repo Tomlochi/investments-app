@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { anthropic, sanitize, MODEL, parseJsonResponse } from './client';
-import { JOURNAL_COACH_SCHEMA, THESIS_CHECK_SCHEMA, EXIT_ADVICE_SCHEMA, PROCESS_GRADE_SCHEMA } from './schemas';
+import { JOURNAL_COACH_SCHEMA, THESIS_CHECK_SCHEMA, EXIT_ADVICE_SCHEMA, PROCESS_GRADE_SCHEMA, STOP_ADVICE_SCHEMA } from './schemas';
 import type {
   JournalCoachRequest,
   JournalCoachResult,
@@ -10,6 +10,8 @@ import type {
   ExitAdviceResult,
   ProcessGradeRequest,
   ProcessGrade,
+  StopAdviceRequest,
+  StopAdviceResult,
 } from '../../types';
 
 export async function getJournalCoach(request: JournalCoachRequest): Promise<JournalCoachResult> {
@@ -158,6 +160,57 @@ If the thesis is invalidated by the invalidation condition they wrote, say exit 
   });
 
   const parsed = parseJsonResponse<Omit<ExitAdviceResult, 'timestamp'>>(response);
+  return { ...parsed, timestamp: new Date().toISOString() };
+}
+
+export async function getStopAdvice(request: StopAdviceRequest): Promise<StopAdviceResult> {
+  const i = request.indicators;
+  const indicatorsSummary = i
+    ? [
+        `ATR(14): ${i.atr14?.toFixed(2) ?? 'n/a'}`,
+        `RSI(14): ${i.rsi14?.toFixed(1) ?? 'n/a'}`,
+        `SMA20: ${i.sma20?.toFixed(2) ?? 'n/a'}`,
+        `SMA50: ${i.sma50?.toFixed(2) ?? 'n/a'}`,
+        `SMA200: ${i.sma200?.toFixed(2) ?? 'n/a'}`,
+        `52-week position: ${i.fiftyTwoWeekPosition != null ? `${(i.fiftyTwoWeekPosition * 100).toFixed(0)}% of the range (0% = 52-week low, 100% = 52-week high)` : 'n/a'}`,
+      ].join('\n')
+    : 'Unavailable — no indicator data could be loaded for this symbol.';
+
+  const openPnlPercent = request.purchasePrice > 0
+    ? ((request.currentPrice - request.purchasePrice) / request.purchasePrice) * 100
+    : null;
+
+  const prompt = `An investor holds a long position and wants a second opinion on where to place the protective stop-loss order in their broker app. They will read your answer and then set the order by hand, so the number has to be one they can actually type in.
+
+THE POSITION
+Symbol: ${sanitize(request.name)} (${sanitize(request.symbol, 15)})
+Current price: $${request.currentPrice.toFixed(2)}
+Average cost: $${request.purchasePrice.toFixed(2)}${openPnlPercent !== null ? ` (open position is ${openPnlPercent >= 0 ? 'up' : 'down'} ${Math.abs(openPnlPercent).toFixed(1)}%)` : ''}
+Stop currently set: ${request.currentStop !== null ? `$${request.currentStop.toFixed(2)}` : 'none'}
+
+TECHNICALS
+${indicatorsSummary}
+
+Recommend one stop price. Ground it in the technicals above — name a support level, a moving average, an ATR multiple below the price, or a recent swing low. Do not give a round percentage with no technical justification behind it.
+
+The stop must sit below the current price of $${request.currentPrice.toFixed(2)}; a stop at or above it would trigger the moment it is placed.
+
+${request.currentStop !== null
+  ? `They already have a stop at $${request.currentStop.toFixed(2)}. State plainly whether your recommendation raises it, leaves it where it is, or loosens it — and if you are loosening a stop, justify why that is not just giving a loser more room.`
+  : 'They have no stop set yet, so this is the first one.'}
+
+If the technicals are unavailable, say so in your reasoning and base the level on the price and cost basis alone rather than inventing indicator values.`;
+
+  const response = await anthropic.messages.create({
+    model: MODEL,
+    max_tokens: 2048,
+    output_config: {
+      format: { type: 'json_schema', schema: STOP_ADVICE_SCHEMA },
+    },
+    messages: [{ role: 'user', content: prompt }],
+  });
+
+  const parsed = parseJsonResponse<Omit<StopAdviceResult, 'timestamp'>>(response);
   return { ...parsed, timestamp: new Date().toISOString() };
 }
 

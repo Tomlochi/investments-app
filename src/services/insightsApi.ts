@@ -6,6 +6,7 @@ import {
   getRebalancePlan,
   getDevilsAdvocate,
   getExitAdvice,
+  getStopAdvice,
   getProcessGrade,
 } from '../lib/claude';
 import type {
@@ -19,6 +20,8 @@ import type {
   DevilsAdvocateResult,
   ExitAdviceRequest,
   ExitAdviceResult,
+  StopAdviceRequest,
+  StopAdviceResult,
   ProcessGradeRequest,
   ProcessGrade,
 } from '../types';
@@ -26,7 +29,7 @@ import type {
 export const insightsApi = createApi({
   reducerPath: 'insightsApi',
   baseQuery: fakeBaseQuery(),
-  tagTypes: ['StockInsight', 'PortfolioInsight', 'DailyBrief', 'RebalancePlan', 'DevilsAdvocate', 'ExitAdvice', 'ProcessGrade'],
+  tagTypes: ['StockInsight', 'PortfolioInsight', 'DailyBrief', 'RebalancePlan', 'DevilsAdvocate', 'ExitAdvice', 'StopAdvice', 'ProcessGrade'],
   endpoints: (builder) => ({
     getStockInsight: builder.query<AIInsight, StockInsightRequest>({
       queryFn: async (request) => {
@@ -102,6 +105,17 @@ export const insightsApi = createApi({
       providesTags: (_, __, request) => [{ type: 'ExitAdvice', id: request.plan.symbol }],
     }),
 
+    getStopAdvice: builder.query<StopAdviceResult, StopAdviceRequest>({
+      queryFn: async (request) => {
+        try {
+          return { data: await getStopAdvice(request) };
+        } catch (error) {
+          return { error: { status: 'CUSTOM_ERROR', error: String(error) } };
+        }
+      },
+      providesTags: (_, __, request) => [{ type: 'StopAdvice', id: request.symbol }],
+    }),
+
     getProcessGrade: builder.query<ProcessGrade, ProcessGradeRequest>({
       queryFn: async (request) => {
         try {
@@ -124,5 +138,6 @@ export const {
   useLazyGetRebalancePlanQuery,
   useLazyGetDevilsAdvocateQuery,
   useLazyGetExitAdviceQuery,
+  useLazyGetStopAdviceQuery,
   useLazyGetProcessGradeQuery,
 } = insightsApi;

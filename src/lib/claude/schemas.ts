@@ -166,6 +166,22 @@ export const EXIT_ADVICE_SCHEMA = {
   additionalProperties: false,
 } as const;
 
+export const STOP_ADVICE_SCHEMA = {
+  type: 'object',
+  properties: {
+    suggestedStop: {
+      type: 'number',
+      description: 'The recommended stop-loss price, as an absolute dollar figure.',
+    },
+    reasoning: {
+      type: 'string',
+      description: 'Two to four sentences naming the specific technical basis for this level: a support level, a moving average, an ATR multiple, or a recent swing low.',
+    },
+  },
+  required: ['suggestedStop', 'reasoning'],
+  additionalProperties: false,
+} as const;
+
 export const PROCESS_GRADE_SCHEMA = {
   type: 'object',
   properties: {

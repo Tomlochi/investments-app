@@ -4,6 +4,7 @@ import { ArrowLeft, TrendingUp, TrendingDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { PriceChart } from '../components/stocks/PriceChart';
 import { ThesisCard } from '../components/stocks/ThesisCard';
+import { StopLossAdvisor } from '../components/stocks/StopLossAdvisor';
 import { StockInsights } from '../components/insights/StockInsights';
 import { useGetQuoteQuery } from '../services/stockApi';
 import { formatCurrency, formatPercent, getChangeColor, cn } from '../lib/utils';
@@ -122,6 +123,9 @@ export function StockDetailPage() {
 
       {/* Price Chart */}
       <PriceChart symbol={symbol} title={`${symbol} Price History`} />
+
+      {/* AI stop-loss suggestion from the current technical picture */}
+      <StopLossAdvisor holding={holding} currentPrice={currentPrice} />
 
       {/* Investment thesis + AI check */}
       <ThesisCard holding={holding} currentPrice={currentPrice} />
