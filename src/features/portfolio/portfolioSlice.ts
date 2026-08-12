@@ -70,6 +70,13 @@ const portfolioSlice = createSlice({
         holding.currentPrice = action.payload.price;
       }
     },
+    updateStopPrice: (state, action: PayloadAction<{ symbol: string; stopPrice: number | null }>) => {
+      const holding = state.holdings.find(h => h.symbol === action.payload.symbol);
+      if (holding) {
+        holding.stopPrice = action.payload.stopPrice ?? undefined;
+        saveToStorage(state.holdings);
+      }
+    },
     clearPortfolio: (state) => {
       state.holdings = [];
       saveToStorage(state.holdings);
@@ -77,5 +84,5 @@ const portfolioSlice = createSlice({
   },
 });
 
-export const { addHolding, updateHolding, removeHolding, updateCurrentPrice, clearPortfolio } = portfolioSlice.actions;
+export const { addHolding, updateHolding, removeHolding, updateCurrentPrice, updateStopPrice, clearPortfolio } = portfolioSlice.actions;
 export default portfolioSlice.reducer;

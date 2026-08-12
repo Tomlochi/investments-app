@@ -6,6 +6,8 @@ export interface Stock {
   currentPrice?: number;
   purchaseDate?: string;
   thesis?: string;
+  /** Protective stop for this holding. Only ever written by accepting an AI suggestion. */
+  stopPrice?: number;
 }
 
 export interface Portfolio {
@@ -412,6 +414,22 @@ export interface ExitAdviceResult {
   action: ExitAction;
   reasoning: string;
   suggestedStop?: number;
+  timestamp: string;
+}
+
+export interface StopAdviceRequest {
+  symbol: string;
+  name: string;
+  currentPrice: number;
+  purchasePrice: number;
+  /** The stop currently stored on the holding, or null if none has been set. */
+  currentStop: number | null;
+  indicators: Indicators | null;
+}
+
+export interface StopAdviceResult {
+  suggestedStop: number;
+  reasoning: string;
   timestamp: string;
 }
 
