@@ -74,6 +74,16 @@ const portfolioSlice = createSlice({
       const holding = state.holdings.find(h => h.symbol === action.payload.symbol);
       if (holding) {
         holding.stopPrice = action.payload.stopPrice ?? undefined;
+        // Setting or clearing a stop is the user acknowledging the breach.
+        holding.stopBreachedAt = undefined;
+        saveToStorage(state.holdings);
+      }
+    },
+    markStopBreached: (state, action: PayloadAction<{ symbol: string; price: number }>) => {
+      const holding = state.holdings.find(h => h.symbol === action.payload.symbol);
+      // The guard is what makes a breach notify once per episode instead of once per poll.
+      if (holding && !holding.stopBreachedAt) {
+        holding.stopBreachedAt = new Date().toISOString();
         saveToStorage(state.holdings);
       }
     },
@@ -84,5 +94,5 @@ const portfolioSlice = createSlice({
   },
 });
 
-export const { addHolding, updateHolding, removeHolding, updateCurrentPrice, updateStopPrice, clearPortfolio } = portfolioSlice.actions;
+export const { addHolding, updateHolding, removeHolding, updateCurrentPrice, updateStopPrice, markStopBreached, clearPortfolio } = portfolioSlice.actions;
 export default portfolioSlice.reducer;

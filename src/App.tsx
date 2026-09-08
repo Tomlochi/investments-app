@@ -11,6 +11,9 @@ import { PortfolioHistoryChart } from './components/portfolio/PortfolioHistoryCh
 import { CashCard } from './components/portfolio/CashCard';
 import { RiskPanel } from './components/portfolio/RiskPanel';
 import { AlertWatcher } from './components/alerts/AlertWatcher';
+import { StopWatcher } from './components/portfolio/StopWatcher';
+import { StopBreachBanner } from './components/portfolio/StopBreachBanner';
+import { SectorHeatmap } from './components/market/SectorHeatmap';
 import { PortfolioInsights } from './components/insights/PortfolioInsights';
 import { DailyBrief } from './components/insights/DailyBrief';
 import { StockDetailPage } from './pages/StockDetailPage';
@@ -33,12 +36,14 @@ function Dashboard() {
     <div className="max-w-7xl mx-auto space-y-6">
       <section id="dashboard" className="space-y-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
+        <StopBreachBanner />
         <PortfolioSummary />
         <OpenPositionsPanel />
         <CashCard />
         <DisciplineCard />
         <PortfolioHistoryChart />
         <AllocationChart />
+        <SectorHeatmap />
         <RiskPanel />
       </section>
 
@@ -81,6 +86,7 @@ function App() {
       <AddTradeModal />
       <PlanFormModal />
       <AlertWatcher />
+      <StopWatcher />
     </AppShell>
   );
 }

@@ -3,7 +3,8 @@ import { useSelector } from 'react-redux';
 import { ShieldAlert, Activity } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { useGetProfileBatchQuery } from '../../services/stockApi';
-import { cn } from '../../lib/utils';
+import { cn, formatCurrency } from '../../lib/utils';
+import { computeStopRisk } from '../../lib/stopRisk';
 import type { RootState } from '../../store';
 
 const CONCENTRATION_LIMIT = 25; // single position, % of holdings value
@@ -62,6 +63,16 @@ export function RiskPanel() {
     return { sectors, portfolioBeta, warnings };
   }, [profiles, holdings]);
 
+  // Deliberately independent of `analysis`: stop risk needs no profile data, so a failing
+  // /api/profile-batch call must not hide it behind the loading gate below.
+  const stopRisk = useMemo(() => {
+    const totalValue = holdings.reduce(
+      (sum, h) => sum + h.quantity * (h.currentPrice ?? h.purchasePrice),
+      0
+    );
+    return computeStopRisk(holdings, totalValue);
+  }, [holdings]);
+
   if (holdings.length === 0) return null;
 
   const barColor = theme === 'dark' ? '#3987e5' : '#2a78d6';
@@ -75,6 +86,42 @@ export function RiskPanel() {
         </CardTitle>
       </CardHeader>
       <CardContent>
+        <div className="mb-6 border-b border-gray-100 pb-6 dark:border-gray-800">
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+            If every stop were hit
+          </p>
+
+          {stopRisk.protectedCount === 0 ? (
+            <p className="text-sm text-amber-700 dark:text-amber-400">
+              No holding has a stop set — none of this portfolio has a defined downside.
+            </p>
+          ) : (
+            <>
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                Risking{' '}
+                <span className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                  {formatCurrency(stopRisk.riskAmount)}
+                </span>{' '}
+                ({stopRisk.riskPercent.toFixed(1)}%) across {stopRisk.protectedCount}{' '}
+                {stopRisk.protectedCount === 1 ? 'protected position' : 'protected positions'}
+                {stopRisk.unprotectedCount > 0 && ` · ${stopRisk.unprotectedCount} unprotected`}
+                {stopRisk.breachedCount > 0 && ` · ${stopRisk.breachedCount} breached`}
+              </p>
+
+              <ul className="mt-2 space-y-1">
+                {stopRisk.perHolding.slice(0, 3).map(h => (
+                  <li key={h.symbol} className="flex justify-between text-sm">
+                    <span className="text-gray-700 dark:text-gray-300">{h.symbol}</span>
+                    <span className="text-gray-500 dark:text-gray-400">
+                      {formatCurrency(h.risk)} ({h.percentOfPortfolio.toFixed(1)}%)
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+
         {isLoading || !analysis ? (
           <div className="h-24 flex items-center justify-center">
             <div className="animate-spin h-6 w-6 border-4 border-blue-500 border-t-transparent rounded-full" />
