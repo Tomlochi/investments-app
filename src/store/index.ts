@@ -3,6 +3,7 @@ import { setupListeners } from '@reduxjs/toolkit/query';
 import { stockApi } from '../services/stockApi';
 import { insightsApi } from '../services/insightsApi';
 import { indicatorsApi } from '../services/indicatorsApi';
+import { heatmapApi } from '../services/heatmapApi';
 import portfolioReducer from '../features/portfolio/portfolioSlice';
 import uiReducer from '../features/ui/uiSlice';
 import journalReducer from '../features/journal/journalSlice';
@@ -27,12 +28,14 @@ export const store = configureStore({
     [stockApi.reducerPath]: stockApi.reducer,
     [insightsApi.reducerPath]: insightsApi.reducer,
     [indicatorsApi.reducerPath]: indicatorsApi.reducer,
+    [heatmapApi.reducerPath]: heatmapApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware()
       .concat(stockApi.middleware)
       .concat(insightsApi.middleware)
-      .concat(indicatorsApi.middleware),
+      .concat(indicatorsApi.middleware)
+      .concat(heatmapApi.middleware),
 });
 
 setupListeners(store.dispatch);

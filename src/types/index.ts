@@ -8,6 +8,8 @@ export interface Stock {
   thesis?: string;
   /** Protective stop for this holding. Only ever written by accepting an AI suggestion. */
   stopPrice?: number;
+  /** ISO timestamp of the first price seen at or below stopPrice. Cleared when the stop changes. */
+  stopBreachedAt?: string;
 }
 
 export interface Portfolio {
@@ -415,6 +417,19 @@ export interface ExitAdviceResult {
   reasoning: string;
   suggestedStop?: number;
   timestamp: string;
+}
+
+export interface HeatmapResponse {
+  asOf: string;
+  count: number;
+  expected: number;
+  tiles: {
+    symbol: string;
+    name: string;
+    sector: string;
+    changePercent: number;
+    marketCap: number;
+  }[];
 }
 
 export interface StopAdviceRequest {

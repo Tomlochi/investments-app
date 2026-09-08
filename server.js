@@ -3,6 +3,7 @@ import cors from 'cors';
 import { rateLimit } from 'express-rate-limit';
 import YahooFinance from 'yahoo-finance2';
 import { sma, rsi14, atr14, fiftyTwoWeekPosition } from './server/indicators.js';
+import sp500 from './server/sp500.json' with { type: 'json' };
 const yahooFinance = new YahooFinance();
 
 const app = express();
@@ -138,6 +139,10 @@ const PROFILE_TTL = 24 * 60 * 60 * 1000;
 
 const indicatorCache = new Map();
 const INDICATOR_TTL = 24 * 60 * 60 * 1000;
+
+// Single-entry cache: the heatmap endpoint takes no parameters, so there is only one value.
+let heatmapCache = null; // { at: number, payload: object }
+const HEATMAP_TTL = 60 * 1000;
 
 app.get('/api/profile-batch', async (req, res) => {
   const { symbols } = req.query;
@@ -304,6 +309,66 @@ app.get('/api/news', async (req, res) => {
   } catch (error) {
     console.error('News error:', error);
     res.status(500).json({ error: 'Failed to fetch news.' });
+  }
+});
+
+// S&P 500 heatmap: batched quotes for every constituent, joined to its sector.
+app.get('/api/heatmap', async (req, res) => {
+  if (heatmapCache && Date.now() - heatmapCache.at < HEATMAP_TTL) {
+    return res.json(heatmapCache.payload);
+  }
+
+  try {
+    const sectorBySymbol = new Map(sp500.map((c) => [c.symbol, c]));
+    const symbols = sp500.map((c) => c.symbol);
+
+    // Chunks of 100 in parallel: measured at ~600ms for all 503 symbols.
+    const chunks = [];
+    for (let i = 0; i < symbols.length; i += 100) {
+      chunks.push(symbols.slice(i, i + 100));
+    }
+
+    // A chunk that fails yields nothing rather than failing the whole map —
+    // a partial heatmap is more useful than an error card.
+    const settled = await Promise.all(
+      chunks.map((chunk) =>
+        yahooFinance.quote(chunk).catch((err) => {
+          console.error('Heatmap chunk error:', err.message);
+          return [];
+        })
+      )
+    );
+
+    const tiles = [];
+    for (const quote of settled.flat()) {
+      const meta = sectorBySymbol.get(quote.symbol);
+      const changePercent = quote.regularMarketChangePercent;
+      const marketCap = quote.marketCap;
+      // A tile with no area or no colour is not renderable.
+      if (!meta || typeof marketCap !== 'number' || marketCap <= 0) continue;
+      if (typeof changePercent !== 'number' || !Number.isFinite(changePercent)) continue;
+
+      tiles.push({
+        symbol: quote.symbol,
+        name: meta.name,
+        sector: meta.sector,
+        changePercent,
+        marketCap,
+      });
+    }
+
+    const payload = {
+      asOf: new Date().toISOString(),
+      count: tiles.length,
+      expected: symbols.length,
+      tiles,
+    };
+
+    heatmapCache = { at: Date.now(), payload };
+    res.json(payload);
+  } catch (error) {
+    console.error('Heatmap error:', error);
+    res.status(500).json({ error: 'Failed to build heatmap.' });
   }
 });
 
